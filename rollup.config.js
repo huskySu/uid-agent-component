@@ -1,84 +1,64 @@
-import babel from "rollup-plugin-babel";
-import commonjs from "rollup-plugin-commonjs";
-import external from "rollup-plugin-peer-deps-external";
-import postcss from "rollup-plugin-postcss";
-import resolve from "rollup-plugin-node-resolve";
-import svgr from "@svgr/rollup";
-import alias from "@rollup/plugin-alias";
-import json from "rollup-plugin-json";
-import url from "rollup-plugin-url";
-import path from "path";
-import image from "@rollup/plugin-image";
-import { eslint } from "rollup-plugin-eslint";
+import { babel } from '@rollup/plugin-babel';
+import alias from '@rollup/plugin-alias';
+import commonjs from '@rollup/plugin-commonjs';
+import postcss from 'rollup-plugin-postcss';
+import del from 'rollup-plugin-delete';
+import typescript from '@rollup/plugin-typescript';
+import resolve from '@rollup/plugin-node-resolve';
+import external from 'rollup-plugin-peer-deps-external'
+import {terser} from 'rollup-plugin-terser';
+import pkg from './package.json'
+const path = require('path');
 
-import pkg from "./package.json";
 
-const shouldGenerateSourcemap = process.env.GENERATE_SOURCEMAP === "true";
+const isDev = process.env.NODE_ENV !== 'production';
 
-const common = {
-  plugins: [
-    eslint({
-      include: path.resolve(__dirname, "src"),
-      exclude: [
-        path.resolve(__dirname, "node_modules"),
-        path.resolve(__dirname, "example")
-      ]
-    }),
-    json({
-      include: ["src/assets/*", "src/i18n/*"],
-      exclude: "node_modules/**"
-    }),
-    alias({
-      entries: {
-        SRC: path.resolve(__dirname, "src"),
-        ASSETS: path.resolve(__dirname, "src/assets"),
-        COMPONENTS: path.resolve(__dirname, "src/components"),
-        SERVICES: path.resolve(__dirname, "src/services"),
-        MODEL: path.resolve(__dirname, "src/model")
-      }
-    }),
-    image(),
-    external(),
-    postcss({
-      modules: true
-    }),
-    url(),
-    svgr({
-      svgoConfig: {
-        plugins: [
-          {
-            removeViewBox: false
-          }
-        ]
-      }
-    }),
-    babel({
-      exclude: "node_modules/**",
-      // runtimeHelpers: true,
-      sourceMaps: shouldGenerateSourcemap,
-      extensions: [".js", ".jsx", ".ts", ".tsx"]
-    }),
-    resolve(),
-    commonjs()
+
+export default {
+  input: './src/index.ts', //入口文件，加载css单独打包成一个文件
+  output: [
+    {
+      file: pkg.main,
+      format: 'cjs',
+      sourcemap: isDev
+    },
+    {
+      file: pkg.module,
+      format: 'es',
+      sourcemap: isDev
+    }
   ],
-  external: ["@ubnt/ui-components"]
-};
 
-export default [
-  {
-    input: "src/index.js",
-    output: [
-      {
-        file: pkg.main,
-        format: "cjs",
-        sourcemap: false
+  plugins: [
+    resolve(), 
+    babel({
+      babelHelpers: 'bundled',
+      exclude: 'node_modules/**',
+      extensions: ['.json','.ts', '.tsx', '.js', '.jsx'],
+      presets: ['@babel/preset-env', '@babel/preset-react'],
+    }),
+    external(),
+    postcss(), 
+    typescript({
+      // compilerOptions: { module: 'CommonJS' },
+      exclude: 'node_modules/**',
+      include: 'src/**',
+      resolveJsonModule: true
+    }),
+    commonjs({
+      extensions: ['.js', '.ts', '.tsx']
+    }),
+    del({ targets: 'dist/*', verbose: true }),
+
+    // 压缩js
+    !isDev && terser(),
+    alias({
+      entries:{
+        src: path.resolve(__dirname, 'src'),
+        component: path.resolve(__dirname, 'src/components')
       },
-      {
-        file: pkg.module,
-        format: "es",
-        sourcemap: false
-      }
-    ],
-    ...common
-  }
-];
+    }),
+  ],
+
+  external:['react', '@ubnt/icons', '@ubnt/ui-components', 'lodash-es'] 
+};
