@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { ReactNode } from 'react'
 import styled from 'styled-components'
 import {Text, LineLoader, Button} from '@ubnt/ui-components'
 
@@ -16,16 +16,18 @@ const Container = styled.section`
   width: 100%;
   display: flex;
   align-items: flex-start;
+  justify-content: center;
 `
 
-const Layouy: React.FC<{
-  loading?: boolean,
+const Layout: React.FC<{
+  children: ReactNode | string,
+  loading?: boolean | undefined,
   error?: string | null | undefined,
-  onClick: () => void
+  onClick?: () => void | undefined
 }> = ({loading, error, children, onClick})=>{
   return (
     <Root>
-      <LineLoader isLoading={loading} />
+      <LineLoader isLoading={loading||false} />
       <Container>
         {
           error ? (
@@ -40,4 +42,4 @@ const Layouy: React.FC<{
   )
 }
 
-export default Layouy
+export default Layout
